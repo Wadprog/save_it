@@ -1,0 +1,25 @@
+development:
+  name: Development
+  url: https://dev-api.expense-tracker.example.com
+  deployment_branch_policy:
+    protected_branches: true
+    custom_branches: ['develop']
+  environment_variables:
+    AWS_REGION: us-east-1
+    NODE_ENV: development
+  required_reviewers:
+    - required_reviewers: 1
+      required_approving_review_count: 1
+
+production:
+  name: Production
+  url: https://api.expense-tracker.example.com
+  deployment_branch_policy:
+    protected_branches: true
+    custom_branches: ['main']
+  environment_variables:
+    AWS_REGION: us-east-1
+    NODE_ENV: production
+  required_reviewers:
+    - required_reviewers: 2
+      required_approving_review_count: 2

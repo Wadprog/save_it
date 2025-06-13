@@ -1,0 +1,34 @@
+Resources:
+  ExpenseTrackerApi:
+    Type: AWS::AppSync::GraphQLApi
+    Properties:
+      Name: ${self:service}-${self:provider.stage}-api
+      AuthenticationType: AMAZON_COGNITO_USER_POOLS
+      UserPoolConfig:
+        UserPoolId: !ImportValue ${self:service}-${self:provider.stage}-UserPoolId
+        AwsRegion: ${self:provider.region}
+
+  ApiSchema:
+    Type: AWS::AppSync::GraphQLSchema
+    Properties:
+      ApiId: !GetAtt ExpenseTrackerApi.ApiId
+      Definition: ${file(src/graphql/schema/schema.graphql)}
+
+  ApiKey:
+    Type: AWS::AppSync::ApiKey
+    Properties:
+      ApiId: !GetAtt ExpenseTrackerApi.ApiId
+      Description: API Key for development
+
+Outputs:
+  GraphQLApiId:
+    Description: The ID of the GraphQL API
+    Value: !GetAtt ExpenseTrackerApi.ApiId
+    Export:
+      Name: ${self:service}-${self:provider.stage}-GraphQLApiId
+
+  GraphQLApiUrl:
+    Description: The URL of the GraphQL API
+    Value: !GetAtt ExpenseTrackerApi.GraphQLUrl
+    Export:
+      Name: ${self:service}-${self:provider.stage}-GraphQLApiUrl

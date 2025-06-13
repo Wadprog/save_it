@@ -1,0 +1,48 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: webvitalsorg
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: save5cents
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: expense-tracker
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  iam:
+    role: !ImportValue ${self:service}-${self:provider.stage}-LambdaExecutionRoleArn
+
+custom:
+  dbMasterUsername: admin
+  dbMasterPassword: ${ssm:/expense-tracker/db-password}
+
+functions:
+  # Lambda functions will be added here as we create them
+  createUser:
+    handler: src/functions/auth/createUser.handler
+    events:
+      - http:
+          path: /users
+          method: post
+          cors: true
+
+  authenticateUser:
+    handler: src/functions/auth/authenticateUser.handler
+    events:
+      - http:
+          path: /auth
+          method: post
+          cors: true
+
+resources:
+  - ${file(resources/cognito/user-pool.yml)}
+  - ${file(resources/appsync/api.yml)}
+  - ${file(resources/rds/database.yml)}
+  - ${file(resources/iam/roles.yml)}
+
+plugins:
+  - serverless-offline
+  - serverless-appsync-plugin

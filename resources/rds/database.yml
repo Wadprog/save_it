@@ -1,0 +1,50 @@
+Resources:
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 20
+      MasterUsername: ${self:custom.dbMasterUsername}
+      MasterUserPassword: ${self:custom.dbMasterPassword}
+      PubliclyAccessible: false
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      DBName: expense_tracker
+      BackupRetentionPeriod: 7
+      MultiAZ: false
+      StorageType: gp2
+      EngineVersion: '14.7'
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS instance
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 0.0.0.0/0
+
+  DBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: Parameter group for expense tracker database
+      Family: postgres14
+      Parameters:
+        timezone: UTC
+        log_connections: 1
+        log_disconnections: 1
+
+Outputs:
+  DBEndpoint:
+    Description: The endpoint of the RDS instance
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: ${self:service}-${self:provider.stage}-DBEndpoint
+
+  DBPort:
+    Description: The port of the RDS instance
+    Value: !GetAtt DBInstance.Endpoint.Port
+    Export:
+      Name: ${self:service}-${self:provider.stage}-DBPort

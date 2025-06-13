@@ -1,0 +1,738 @@
+type User {
+  id: ID!
+  email: String!
+  firstName: String!
+  lastName: String!
+  wallets: [Wallet!]!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  preferences: UserPreferences
+  notifications: [Notification!]
+}
+
+type Wallet {
+  id: ID!
+  name: String!
+  balance: Float!
+  userId: ID!
+  expenseSources: [ExpenseSource!]!
+  expenses: [Expense!]!
+  incomes: [Income!]!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type ExpenseSourceType {
+  id: ID!
+  name: String!
+  description: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type ExpenseCategory {
+  id: ID!
+  name: String!
+  description: String
+  iconName: String # For UI display
+  color: String # Hex color code for UI
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type IncomeCategory {
+  id: ID!
+  name: String!
+  description: String
+  iconName: String # For UI display
+  color: String # Hex color code for UI
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type CreditLimitHistory {
+  id: ID!
+  expenseSourceId: ID!
+  expenseSource: ExpenseSource!
+  creditLimit: Float!
+  effectiveDate: AWSDateTime!
+  reason: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type ExpenseSource {
+  id: ID!
+  walletId: ID!
+  typeId: ID!
+  type: ExpenseSourceType!
+  name: String!
+  description: String
+  isActive: Boolean!
+  currency: String! # Currency for this expense source
+  # Credit card specific fields
+  creditLimit: Float
+  initialSpentBalance: Float # Initial balance when card is added
+  interestRate: Float
+  billingCycleStartDay: Int
+  billingCycleEndDay: Int
+  paymentDueInterval: Int # Number of days after billing_cycle_start_day
+  expenses: [Expense!]!
+  incomes: [Income!]!
+  creditCardPayments: [CreditCardPayment!]
+  creditLimitHistory: [CreditLimitHistory!] # History of credit limit changes
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type Expense {
+  id: ID!
+  amount: Float!
+  description: String!
+  date: AWSDateTime!
+  type: ExpenseType!
+  categoryId: ID!
+  category: ExpenseCategory!
+  currency: String! # Currency of the expense
+  exchangeRate: Float # Exchange rate to wallet's base currency at time of expense
+  expenseSourceId: ID!
+  expenseSource: ExpenseSource!
+  walletId: ID!
+  wallet: Wallet!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  tags: [Tag!]
+}
+
+type Income {
+  id: ID!
+  amount: Float!
+  description: String!
+  date: AWSDateTime!
+  type: IncomeType!
+  categoryId: ID!
+  category: IncomeCategory!
+  currency: String! # Currency of the income
+  exchangeRate: Float # Exchange rate to wallet's base currency at time of income
+  expenseSourceId: ID!
+  expenseSource: ExpenseSource!
+  walletId: ID!
+  wallet: Wallet!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  tags: [Tag!]
+}
+
+type CreditCardPayment {
+  id: ID!
+  expenseSourceId: ID!
+  expenseSource: ExpenseSource!
+  amount: Float!
+  paymentDate: AWSDateTime!
+  dueDate: AWSDateTime!
+  status: PaymentStatus!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+enum ExpenseType {
+  RECURRING
+  NON_RECURRING
+}
+
+enum IncomeType {
+  RECURRING
+  NON_RECURRING
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  LATE
+  MISSED
+}
+
+# Budget types
+type Budget {
+  id: ID!
+  wallet: Wallet
+  sharedWallet: SharedWallet
+  category: ExpenseCategory!
+  amount: Float!
+  periodStartDate: AWSDate!
+  periodEndDate: AWSDate!
+  allocations: [BudgetAllocation!]
+  tracking: [BudgetTracking!]
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type BudgetAllocation {
+  id: ID!
+  budget: Budget!
+  wallet: Wallet!
+  amount: Float!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type BudgetTracking {
+  id: ID!
+  budget: Budget!
+  expense: Expense!
+  amount: Float!
+  createdAt: AWSDateTime!
+}
+
+input CreateBudgetInput {
+  walletId: ID
+  sharedWalletId: ID
+  categoryId: ID!
+  amount: Float!
+  periodStartDate: AWSDate!
+  periodEndDate: AWSDate!
+  allocations: [BudgetAllocationInput!]
+}
+
+input BudgetAllocationInput {
+  walletId: ID!
+  amount: Float!
+}
+
+input UpdateBudgetInput {
+  id: ID!
+  amount: Float
+  periodStartDate: AWSDate
+  periodEndDate: AWSDate
+  allocations: [BudgetAllocationInput!]
+}
+
+# Recurring Transaction types
+type RecurringTransaction {
+  id: ID!
+  wallet: Wallet!
+  expenseSource: ExpenseSource
+  amount: Float!
+  description: String!
+  frequency: RecurringFrequency!
+  startDate: AWSDate!
+  endDate: AWSDate
+  lastOccurrenceDate: AWSDate
+  nextOccurrenceDate: AWSDate
+  category: ExpenseCategory
+  type: TransactionType!
+  currency: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum TransactionType {
+  EXPENSE
+  INCOME
+}
+
+input CreateRecurringTransactionInput {
+  walletId: ID!
+  expenseSourceId: ID
+  amount: Float!
+  description: String!
+  frequency: RecurringFrequency!
+  startDate: AWSDate!
+  endDate: AWSDate
+  categoryId: ID
+  type: TransactionType!
+  currency: String!
+}
+
+input UpdateRecurringTransactionInput {
+  id: ID!
+  amount: Float
+  description: String
+  frequency: RecurringFrequency
+  endDate: AWSDate
+  categoryId: ID
+  currency: String
+}
+
+# Tag types
+type Tag {
+  id: ID!
+  wallet: Wallet!
+  name: String!
+  color: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+input CreateTagInput {
+  walletId: ID!
+  name: String!
+  color: String!
+}
+
+input UpdateTagInput {
+  id: ID!
+  name: String
+  color: String
+}
+
+# User Preferences types
+type UserPreferences {
+  id: ID!
+  user: User!
+  defaultCurrency: String!
+  language: String!
+  timezone: String!
+  notificationEnabled: Boolean!
+  emailNotifications: Boolean!
+  pushNotifications: Boolean!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+input UpdateUserPreferencesInput {
+  defaultCurrency: String
+  language: String
+  timezone: String
+  notificationEnabled: Boolean
+  emailNotifications: Boolean
+  pushNotifications: Boolean
+}
+
+# Notification types
+type Notification {
+  id: ID!
+  user: User!
+  type: NotificationType!
+  title: String!
+  message: String!
+  isRead: Boolean!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+enum NotificationType {
+  PAYMENT_DUE
+  BUDGET_LIMIT
+  CREDIT_LIMIT
+  SYSTEM_UPDATE
+  SECURITY_ALERT
+}
+
+# Audit Log types
+type AuditLog {
+  id: ID!
+  user: User!
+  action: AuditAction!
+  entityType: String!
+  entityId: ID!
+  oldValue: AWSJSON
+  newValue: AWSJSON
+  createdAt: AWSDateTime!
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+# Shared Wallet types
+type SharedWallet {
+  id: ID!
+  name: String!
+  description: String
+  members: [SharedWalletMember!]!
+  budgets: [Budget!]!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type SharedWalletMember {
+  sharedWallet: SharedWallet!
+  wallet: Wallet!
+  role: SharedWalletRole!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+enum SharedWalletRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+type Query {
+  getUser(id: ID!): User
+  getWallet(id: ID!): Wallet
+  getExpenseSource(id: ID!): ExpenseSource
+  getExpense(id: ID!): Expense
+  getIncome(id: ID!): Income
+  getCreditCardPayment(id: ID!): CreditCardPayment
+  getCreditLimitHistory(id: ID!): CreditLimitHistory
+  getExpenseCategory(id: ID!): ExpenseCategory
+  getIncomeCategory(id: ID!): IncomeCategory
+  listWallets(userId: ID!): [Wallet!]!
+  listExpenseSources(walletId: ID!): [ExpenseSource!]!
+  listExpenses(walletId: ID!): [Expense!]!
+  listIncomes(walletId: ID!): [Income!]!
+  listCreditCardPayments(expenseSourceId: ID!): [CreditCardPayment!]!
+  listCreditLimitHistory(expenseSourceId: ID!): [CreditLimitHistory!]!
+  listExpenseCategories: [ExpenseCategory!]!
+  listIncomeCategories: [IncomeCategory!]!
+  getUpcomingCreditCardPayments(expenseSourceId: ID!): [CreditCardPayment!]!
+  getBudget(id: ID!): Budget
+  listBudgets(walletId: ID, sharedWalletId: ID): [Budget!]!
+  getRecurringTransaction(id: ID!): RecurringTransaction
+  listRecurringTransactions(walletId: ID!): [RecurringTransaction!]!
+  getTag(id: ID!): Tag
+  listTags(walletId: ID!): [Tag!]!
+  getUserPreferences: UserPreferences
+  getNotification(id: ID!): Notification
+  listNotifications: [Notification!]!
+  unreadNotificationsCount: Int!
+  getAuditLog(id: ID!): AuditLog
+  listAuditLogs(
+    entityType: String
+    startDate: AWSDateTime
+    endDate: AWSDateTime
+  ): [AuditLog!]!
+  getSharedWallet(id: ID!): SharedWallet
+  listSharedWallets: [SharedWallet!]!
+  getSharedWalletMember(sharedWalletId: ID!, walletId: ID!): SharedWalletMember
+  getBudgetAllocations(budgetId: ID!): [BudgetAllocation!]!
+  getBudgetTracking(budgetId: ID!): [BudgetTracking!]!
+}
+
+type Mutation {
+  createUser(input: CreateUserInput!): User!
+  updateUser(id: ID!, input: UpdateUserInput!): User!
+  createWallet(input: CreateWalletInput!): Wallet!
+  updateWallet(id: ID!, input: UpdateWalletInput!): Wallet!
+  deleteWallet(id: ID!): Boolean!
+  createExpenseSource(input: CreateExpenseSourceInput!): ExpenseSource!
+  updateExpenseSource(id: ID!, input: UpdateExpenseSourceInput!): ExpenseSource!
+  deleteExpenseSource(id: ID!): Boolean!
+  createExpense(input: CreateExpenseInput!): Expense!
+  updateExpense(id: ID!, input: UpdateExpenseInput!): Expense!
+  deleteExpense(id: ID!): Boolean!
+  createIncome(input: CreateIncomeInput!): Income!
+  updateIncome(id: ID!, input: UpdateIncomeInput!): Income!
+  deleteIncome(id: ID!): Boolean!
+  createCreditCardPayment(
+    input: CreateCreditCardPaymentInput!
+  ): CreditCardPayment!
+  updateCreditCardPayment(
+    id: ID!
+    input: UpdateCreditCardPaymentInput!
+  ): CreditCardPayment!
+  deleteCreditCardPayment(id: ID!): Boolean!
+  createCreditLimitHistory(
+    input: CreateCreditLimitHistoryInput!
+  ): CreditLimitHistory!
+  updateCreditLimitHistory(
+    id: ID!
+    input: UpdateCreditLimitHistoryInput!
+  ): CreditLimitHistory!
+  deleteCreditLimitHistory(id: ID!): Boolean!
+  createExpenseCategory(input: CreateExpenseCategoryInput!): ExpenseCategory!
+  updateExpenseCategory(
+    id: ID!
+    input: UpdateExpenseCategoryInput!
+  ): ExpenseCategory!
+  deleteExpenseCategory(id: ID!): Boolean!
+  createIncomeCategory(input: CreateIncomeCategoryInput!): IncomeCategory!
+  updateIncomeCategory(
+    id: ID!
+    input: UpdateIncomeCategoryInput!
+  ): IncomeCategory!
+  deleteIncomeCategory(id: ID!): Boolean!
+  createBudget(input: CreateBudgetInput!): Budget!
+  updateBudget(input: UpdateBudgetInput!): Budget!
+  deleteBudget(id: ID!): Boolean!
+  createRecurringTransaction(
+    input: CreateRecurringTransactionInput!
+  ): RecurringTransaction!
+  updateRecurringTransaction(
+    input: UpdateRecurringTransactionInput!
+  ): RecurringTransaction!
+  deleteRecurringTransaction(id: ID!): Boolean!
+  createTag(input: CreateTagInput!): Tag!
+  updateTag(input: UpdateTagInput!): Tag!
+  deleteTag(id: ID!): Boolean!
+  addTagToTransaction(
+    transactionId: ID!
+    tagId: ID!
+    transactionType: TransactionType!
+  ): Boolean!
+  removeTagFromTransaction(
+    transactionId: ID!
+    tagId: ID!
+    transactionType: TransactionType!
+  ): Boolean!
+  updateUserPreferences(input: UpdateUserPreferencesInput!): UserPreferences!
+  markNotificationAsRead(id: ID!): Notification!
+  markAllNotificationsAsRead: Boolean!
+  deleteNotification(id: ID!): Boolean!
+  createSharedWallet(input: CreateSharedWalletInput!): SharedWallet!
+  updateSharedWallet(input: UpdateSharedWalletInput!): SharedWallet!
+  deleteSharedWallet(id: ID!): Boolean!
+  addSharedWalletMember(
+    sharedWalletId: ID!
+    walletId: ID!
+    role: SharedWalletRole!
+  ): SharedWalletMember!
+  updateSharedWalletMember(
+    sharedWalletId: ID!
+    walletId: ID!
+    role: SharedWalletRole!
+  ): SharedWalletMember!
+  removeSharedWalletMember(sharedWalletId: ID!, walletId: ID!): Boolean!
+  addBudgetAllocation(
+    budgetId: ID!
+    walletId: ID!
+    amount: Float!
+  ): BudgetAllocation!
+  updateBudgetAllocation(
+    budgetId: ID!
+    walletId: ID!
+    amount: Float!
+  ): BudgetAllocation!
+  removeBudgetAllocation(budgetId: ID!, walletId: ID!): Boolean!
+}
+
+type Subscription {
+  onExpenseCreated(walletId: ID!): Expense
+    @aws_subscribe(mutations: ["createExpense"])
+  onExpenseUpdated(walletId: ID!): Expense
+    @aws_subscribe(mutations: ["updateExpense"])
+  onExpenseDeleted(walletId: ID!): ID
+    @aws_subscribe(mutations: ["deleteExpense"])
+  onIncomeCreated(walletId: ID!): Income
+    @aws_subscribe(mutations: ["createIncome"])
+  onIncomeUpdated(walletId: ID!): Income
+    @aws_subscribe(mutations: ["updateIncome"])
+  onIncomeDeleted(walletId: ID!): ID @aws_subscribe(mutations: ["deleteIncome"])
+  onCreditCardPaymentCreated(expenseSourceId: ID!): CreditCardPayment
+    @aws_subscribe(mutations: ["createCreditCardPayment"])
+  onCreditCardPaymentUpdated(expenseSourceId: ID!): CreditCardPayment
+    @aws_subscribe(mutations: ["updateCreditCardPayment"])
+  onCreditCardPaymentDeleted(expenseSourceId: ID!): ID
+    @aws_subscribe(mutations: ["deleteCreditCardPayment"])
+  onCreditLimitHistoryCreated(expenseSourceId: ID!): CreditLimitHistory
+    @aws_subscribe(mutations: ["createCreditLimitHistory"])
+  onCreditLimitHistoryUpdated(expenseSourceId: ID!): CreditLimitHistory
+    @aws_subscribe(mutations: ["updateCreditLimitHistory"])
+  onCreditLimitHistoryDeleted(expenseSourceId: ID!): ID
+    @aws_subscribe(mutations: ["deleteCreditLimitHistory"])
+  onExpenseCategoryCreated: ExpenseCategory
+    @aws_subscribe(mutations: ["createExpenseCategory"])
+  onExpenseCategoryUpdated: ExpenseCategory
+    @aws_subscribe(mutations: ["updateExpenseCategory"])
+  onExpenseCategoryDeleted: ID
+    @aws_subscribe(mutations: ["deleteExpenseCategory"])
+  onIncomeCategoryCreated: IncomeCategory
+    @aws_subscribe(mutations: ["createIncomeCategory"])
+  onIncomeCategoryUpdated: IncomeCategory
+    @aws_subscribe(mutations: ["updateIncomeCategory"])
+  onIncomeCategoryDeleted: ID
+    @aws_subscribe(mutations: ["deleteIncomeCategory"])
+  onBudgetCreated(walletId: ID, sharedWalletId: ID): Budget
+  onBudgetUpdated(walletId: ID, sharedWalletId: ID): Budget
+  onBudgetDeleted(walletId: ID, sharedWalletId: ID): ID
+  onRecurringTransactionCreated(walletId: ID!): RecurringTransaction
+  onRecurringTransactionUpdated(walletId: ID!): RecurringTransaction
+  onRecurringTransactionDeleted(walletId: ID!): ID
+  onTagCreated(walletId: ID!): Tag
+  onTagUpdated(walletId: ID!): Tag
+  onTagDeleted(walletId: ID!): ID
+  onNotificationCreated: Notification
+  onNotificationUpdated: Notification
+  onNotificationDeleted: ID
+  onSharedWalletCreated: SharedWallet
+  onSharedWalletUpdated: SharedWallet
+  onSharedWalletDeleted: ID
+  onSharedWalletMemberAdded(sharedWalletId: ID!): SharedWalletMember
+  onSharedWalletMemberUpdated(sharedWalletId: ID!): SharedWalletMember
+  onSharedWalletMemberRemoved(sharedWalletId: ID!): ID
+  onBudgetAllocationAdded(budgetId: ID!): BudgetAllocation
+  onBudgetAllocationUpdated(budgetId: ID!): BudgetAllocation
+  onBudgetAllocationRemoved(budgetId: ID!): ID
+}
+
+input CreateUserInput {
+  email: String!
+  firstName: String!
+  lastName: String!
+  password: String!
+}
+
+input UpdateUserInput {
+  firstName: String
+  lastName: String
+}
+
+input CreateWalletInput {
+  name: String!
+  balance: Float!
+  userId: ID!
+}
+
+input UpdateWalletInput {
+  name: String
+  balance: Float
+}
+
+input CreateExpenseSourceInput {
+  walletId: ID!
+  typeId: ID!
+  name: String!
+  description: String
+  isActive: Boolean
+  currency: String! # Currency for this expense source
+  creditLimit: Float
+  initialSpentBalance: Float # Initial balance when card is added
+  interestRate: Float
+  billingCycleStartDay: Int
+  billingCycleEndDay: Int
+  paymentDueInterval: Int # Number of days after billing_cycle_start_day
+}
+
+input UpdateExpenseSourceInput {
+  name: String
+  description: String
+  isActive: Boolean
+  currency: String # Currency for this expense source
+  creditLimit: Float
+  initialSpentBalance: Float # Initial balance when card is added
+  interestRate: Float
+  billingCycleStartDay: Int
+  billingCycleEndDay: Int
+  paymentDueInterval: Int # Number of days after billing_cycle_start_day
+}
+
+input CreateExpenseInput {
+  amount: Float!
+  description: String!
+  date: AWSDateTime!
+  type: ExpenseType!
+  categoryId: ID!
+  currency: String! # Currency of the expense
+  exchangeRate: Float # Exchange rate to wallet's base currency at time of expense
+  expenseSourceId: ID!
+  walletId: ID!
+}
+
+input UpdateExpenseInput {
+  amount: Float
+  description: String
+  date: AWSDateTime
+  type: ExpenseType
+  categoryId: ID
+  currency: String # Currency of the expense
+  exchangeRate: Float # Exchange rate to wallet's base currency at time of expense
+  expenseSourceId: ID
+}
+
+input CreateIncomeInput {
+  amount: Float!
+  description: String!
+  date: AWSDateTime!
+  type: IncomeType!
+  categoryId: ID!
+  currency: String! # Currency of the income
+  exchangeRate: Float # Exchange rate to wallet's base currency at time of income
+  expenseSourceId: ID!
+  walletId: ID!
+}
+
+input UpdateIncomeInput {
+  amount: Float
+  description: String
+  date: AWSDateTime
+  type: IncomeType
+  categoryId: ID
+  currency: String # Currency of the income
+  exchangeRate: Float # Exchange rate to wallet's base currency at time of income
+  expenseSourceId: ID
+}
+
+input CreateCreditCardPaymentInput {
+  expenseSourceId: ID!
+  amount: Float!
+  paymentDate: AWSDateTime!
+  dueDate: AWSDateTime!
+  status: PaymentStatus!
+}
+
+input UpdateCreditCardPaymentInput {
+  amount: Float
+  paymentDate: AWSDateTime
+  dueDate: AWSDateTime
+  status: PaymentStatus
+}
+
+input CreateCreditLimitHistoryInput {
+  expenseSourceId: ID!
+  creditLimit: Float!
+  effectiveDate: AWSDateTime!
+  reason: String
+}
+
+input UpdateCreditLimitHistoryInput {
+  creditLimit: Float
+  effectiveDate: AWSDateTime
+  reason: String
+}
+
+input CreateExpenseCategoryInput {
+  name: String!
+  description: String
+  iconName: String
+  color: String
+}
+
+input UpdateExpenseCategoryInput {
+  name: String
+  description: String
+  iconName: String
+  color: String
+}
+
+input CreateIncomeCategoryInput {
+  name: String!
+  description: String
+  iconName: String
+  color: String
+}
+
+input UpdateIncomeCategoryInput {
+  name: String
+  description: String
+  iconName: String
+  color: String
+}
+
+input CreateSharedWalletInput {
+  name: String!
+  description: String
+  members: [SharedWalletMemberInput!]!
+}
+
+input SharedWalletMemberInput {
+  walletId: ID!
+  role: SharedWalletRole!
+}
+
+input UpdateSharedWalletInput {
+  id: ID!
+  name: String
+  description: String
+}
